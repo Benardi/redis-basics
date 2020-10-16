@@ -44,12 +44,21 @@ r = Redis(port=redis_port, charset="utf-8", decode_responses=True)
 
 
 @app.route("/hash", methods=['POST'])
-def receive_sensor_data():
+def post_redis_hash():
     data = loads(request.data)
     success = r.hmset(data["key"], data["pairs"])
-    response_body = {"success": success }
+    response_body = {"success": success}
     if success:
       response_body[data["key"]] = r.hgetall(data["key"])
+
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/hash", methods=['GET'])
+def get_redis_hash():
+    response_body = {"success": True}
+    key = request.headers.get("key")
+    response_body[key] = r.hgetall(key)
 
     return Response(dumps(response_body), status=200, mimetype="application/json")
 
