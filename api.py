@@ -3,6 +3,7 @@ import logging
 from json import loads, dumps
 from argparse import ArgumentParser
 
+from redis import Redis
 from flask import Response, Flask, request
 
 app = Flask(__name__)
@@ -25,6 +26,12 @@ parser.add_argument("-k", "--key",
                     action="store", dest="key",
                     type=str, required=False,
                     help="Path to key of certificate used by this API")
+
+parser.add_argument("-rp", "--redis-port",
+                    action="store", dest="redis-port",
+                    type=str, required=True,
+                    help="Port for Redis client")
+
 args = vars(parser.parse_args())
 
 api_address = args["address"]
@@ -32,12 +39,18 @@ api_port = args["port"]
 api_cert = args["cert"]
 api_key = args["key"]
 
+redis_port = args["redis-port"]
+r = Redis(port=redis_port, charset="utf-8", decode_responses=True)
 
-@app.route("/rota", methods=['POST'])
+
+@app.route("/hash", methods=['POST'])
 def receive_sensor_data():
     data = loads(request.data)
-    log.warning("Received a POST request")
-    response_body = {"success": True, "data": data }
+    success = r.hmset(data["key"], data["pairs"])
+    response_body = {"success": success }
+    if success:
+      response_body[data["key"]] = r.hgetall(data["key"])
+
     return Response(dumps(response_body), status=200, mimetype="application/json")
 
 
