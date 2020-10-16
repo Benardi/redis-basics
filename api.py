@@ -1,6 +1,7 @@
 import os
 import logging
 from json import loads, dumps
+from datetime import timedelta
 from argparse import ArgumentParser
 
 from redis import Redis
@@ -43,14 +44,24 @@ redis_port = args["redis-port"]
 r = Redis(port=redis_port, charset="utf-8", decode_responses=True)
 
 
-@app.route("/hash", methods=['POST'])
-def post_redis_hash():
+@app.route("/hash", methods=['POST', 'PUT'])
+def create_redis_hash():
     data = loads(request.data)
     success = r.hmset(data["key"], data["pairs"])
+    if data.get("expire") is not None:
+      expiration = timedelta(**data.get("expire"))
+      r.expire(data["key"], expiration)
+    
+    if request.method == 'PUT' and data.get("newkey") is not None:
+      r.rename(data["key"], data["newkey"])
+
     response_body = {"success": success}
     if success:
-      response_body[data["key"]] = r.hgetall(data["key"])
-
+      if request.method == 'PUT' and data.get("newkey") is not None:
+        response_body[data["newkey"]] = r.hgetall(data["newkey"])
+      else:
+        response_body[data["key"]] = r.hgetall(data["key"])
+  
     return Response(dumps(response_body), status=200, mimetype="application/json")
 
 
