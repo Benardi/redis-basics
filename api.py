@@ -134,6 +134,37 @@ def get_list_at_idx(idx):
     return Response(dumps(response_body), status=200, mimetype="application/json")
 
 
+@app.route("/set", methods=['POST'])
+def create_add_set():
+    data = loads(request.data)
+    length = r.sadd(data["key"], *data["values"])
+   
+    response_body = {"length": length}
+    response_body[data["key"]] = list(r.smembers(data["key"]))
+  
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/set/<n_items>", methods=['GET'])
+def get_n_items_set(n_items):
+    response_body = {"success": True}
+    key = request.headers.get("key")
+   
+    response_body = {key: list(r.srandmember(key, n_items))}
+  
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/set", methods=['GET'])
+def get_set():
+    response_body = {"success": True}
+    key = request.headers.get("key")
+   
+    response_body = {key: list(r.smembers(key))}
+  
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
 def start_api(address, port, clnt_cert=None, clnt_key=None):
     if clnt_cert is None or clnt_key is None:
       app.run(host=address, port=port, debug=False)
