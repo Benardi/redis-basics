@@ -44,7 +44,7 @@ redis_port = args["redis-port"]
 r = Redis(port=redis_port, charset="utf-8", decode_responses=True)
 
 
-@app.route("/hash", methods=['POST', 'PUT'])
+@app.route("/hash", methods=['POST'])
 def create_redis_hash():
     data = loads(request.data)
     success = r.hmset(data["key"], data["pairs"])
@@ -52,15 +52,28 @@ def create_redis_hash():
       expiration = timedelta(**data.get("expire"))
       r.expire(data["key"], expiration)
     
-    if request.method == 'PUT' and data.get("newkey") is not None:
+    response_body = {"success": success}
+    response_body[data["key"]] = r.hgetall(data["key"])
+  
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/hash", methods=['PUT'])
+def update_redis_hash():
+    data = loads(request.data)
+    success = r.hmset(data["key"], data["pairs"])
+    if data.get("expire") is not None:
+      expiration = timedelta(**data.get("expire"))
+      r.expire(data["key"], expiration)
+    
+    if data.get("newkey") is not None:
       r.rename(data["key"], data["newkey"])
 
     response_body = {"success": success}
-    if success:
-      if request.method == 'PUT' and data.get("newkey") is not None:
-        response_body[data["newkey"]] = r.hgetall(data["newkey"])
-      else:
-        response_body[data["key"]] = r.hgetall(data["key"])
+    if data.get("newkey") is not None:
+      response_body[data["newkey"]] = r.hgetall(data["newkey"])
+    else:
+      response_body[data["key"]] = r.hgetall(data["key"])
   
     return Response(dumps(response_body), status=200, mimetype="application/json")
 
@@ -70,6 +83,53 @@ def get_redis_hash():
     response_body = {"success": True}
     key = request.headers.get("key")
     response_body[key] = r.hgetall(key)
+
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/key", methods=['DELETE'])
+def delete_redis_key():
+    status = 200
+    key = request.headers.get("key")
+    success = r.delete(key)
+
+    if not success:
+        status = 404
+    response_body = {"success": bool(success)}
+
+    return Response(dumps(response_body), status=status, mimetype="application/json")
+
+
+@app.route("/list", methods=['POST'])
+def create_redis_list():
+    data = loads(request.data)
+    strat = data.get("strategy")
+    if strat is not None and strat == "left":
+      length = r.lpush(data["key"], *data["values"])
+    else:
+      length = r.rpush(data["key"], *data["values"])
+   
+    response_body = {"length": length}
+    response_body[data["key"]] = r.lrange(data["key"], 0, -1)
+  
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/list", methods=['GET'])
+def get_entire_list():
+    response_body = {"success": True}
+    key = request.headers.get("key")
+    response_body[key] = r.lrange(key, 0, -1) 
+
+    return Response(dumps(response_body), status=200, mimetype="application/json")
+
+
+@app.route("/list/<idx>", methods=['GET'])
+def get_list_at_idx(idx):
+    response_body = {"success": True}
+    key = request.headers.get("key")
+    response_body[key] = {}
+    response_body[key][str(idx)] = r.lindex(key, idx) 
 
     return Response(dumps(response_body), status=200, mimetype="application/json")
 
