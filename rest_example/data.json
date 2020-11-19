@@ -1,0 +1,7 @@
+{
+  "data": [
+  {"Name":"Pradeep", "Company":"SCTL", "Address":"Mumbai", "Location":"RCP"},
+  {"Name":"Benardi", "Company":"LSD", "Address":"Campina Grande", "Location":"UFCG"},
+  {"Name":"Andrew", "Company":"OpenMined", "Address":"London", "Location":"Oxford"}
+  ]
+}

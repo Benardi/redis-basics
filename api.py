@@ -172,7 +172,6 @@ def start_api(address, port, clnt_cert=None, clnt_key=None):
       app.run(host=address, port=port, 
               ssl_context=(clnt_cert, clnt_key), debug=False)
 
-
 if api_cert is None or api_key is None: 
   start_api(api_address, api_port)
 else:
